@@ -6,12 +6,20 @@ A command line interface for managing Jira issues.
 
 ## Installation
 
-1. Install the package:
+1. Create and activate a virtual environment:
 ```bash
-pip install .
+python -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate  # On Windows
 ```
 
-2. Configure your credentials:
+2. Install the package in development mode:
+```bash
+pip install -e .
+```
+
+3. Configure your credentials:
 ```bash
 jira-cli configure
 ```
@@ -67,12 +75,12 @@ jira-cli create \
 
 1. Create a basic task:
 ```bash
-jira-cli create --project ABC --summary "Fix login bug" --type "Task"
+jira-cli create --project MYPROJ --summary "Fix login bug" --type "Task"
 ```
 
 2. Create an issue with description and custom fields:
 ```bash
-jira-cli create --project ABC --summary "New feature" --type "Story" \
+jira-cli create --project MYPROJ --summary "New feature" --type "Story" \
   --description "Implement new search functionality" \
   --fields '{"priority": {"name": "High"}}'
 ```
@@ -87,14 +95,14 @@ The CLI uses a configuration file located at `~/.jira_cli_config` to store setti
    jira-cli configure
    ```
    This will prompt for:
-   - Jira domain (e.g., your-domain.atlassian.net)
+   - Jira domain (e.g., mycompany.atlassian.net - do NOT include https://)
    - API token
    - API version (defaults to 2)
 
 2. **Environment Variables**
    Alternatively, you can configure using environment variables:
    ```bash
-   export JIRA_DOMAIN="your-domain.atlassian.net"
+   export JIRA_DOMAIN="mycompany.atlassian.net"  # Just the domain, no https://
    export JIRA_API_TOKEN="your_api_token"
    export JIRA_API_VERSION="2"  # Optional, defaults to 2
    ```
@@ -103,7 +111,7 @@ The CLI uses a configuration file located at `~/.jira_cli_config` to store setti
    The configuration is stored in `~/.jira_cli_config` with this format:
    ```json
    {
-     "domain": "your-domain.atlassian.net",
+     "domain": "mycompany.atlassian.net",
      "api_token": "your_api_token",
      "api_version": "2"
    }
@@ -112,12 +120,144 @@ The CLI uses a configuration file located at `~/.jira_cli_config` to store setti
 4. **Example Setup**
    Here's a complete example using environment variables:
    ```bash
-   export JIRA_DOMAIN="mycompany.atlassian.net"
+   export JIRA_DOMAIN="mycompany.atlassian.net" # Just the domain, no https://
    export JIRA_API_TOKEN="abc123xyz456"
-   export JIRA_API_VERSION="3"  # For Jira Cloud API v3
+   export JIRA_API_VERSION="2"  # Default is 2
    ```
 
 The CLI will automatically use the updated configuration on the next command execution.
+
+
+## Requirements
+- Python 3.7+
+- Click
+- Requests
+
+## Quick Start
+
+1. Set up the environment:
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+2. Configure your Jira credentials:
+```bash
+jira-cli configure
+```
+
+3. Start using the CLI:
+```bash
+jira-cli create --project MYPROJ --summary "New Issue" --type "Task"
+```
+
+## Command Reference
+
+### Core Commands
+- `create`: Create new issues
+- `get`: Get issue details
+- `update`: Modify existing issues
+- `delete`: Remove issues
+- `comment`: Manage issue comments
+- `transition`: Move issues through workflows
+
+#### Transition Command Usage
+
+List available transitions for an issue:
+```bash
+jira-cli transition ISSUE-KEY --list
+```
+
+Execute a transition using either the transition ID or name:
+```bash
+# Using transition ID
+jira-cli transition ISSUE-KEY --transition TRANSITION_ID
+
+# Using transition name
+jira-cli transition ISSUE-KEY --transition "Transition Name"
+```
+
+Add a comment during transition:
+```bash
+jira-cli transition ISSUE-KEY --transition "Transition Name" --comment "Your comment here"
+```
+
+### Advanced Commands
+- `search`: Find issues using JQL
+- `watch`: Manage issue watchers
+- `dashboard`: View recent activity
+- `configure`: Manage CLI settings
+- `attachment`: Handle issue attachments
+
+## Bulk Issue Creation
+
+The repository includes a utility script `create_issues_from_md.py` for creating multiple Jira issues from a markdown file.
+
+### Usage
+
+1. Prepare a markdown file with issues in the required format (see `bulk_test_jira_data.md` for an example)
+
+2. Run the script in dry-run mode to preview:
+```bash
+./create_issues_from_md.py bulk_test_jira_data.md --project MYPROJ --dry-run
+```
+
+3. Add optional parameters:
+```bash
+# Add a label to all issues
+./create_issues_from_md.py bulk_test_jira_data.md --project MYPROJ --label "incident-followup" --dry-run
+
+# Specify a different issue type (default is "Task")
+./create_issues_from_md.py bulk_test_jira_data.md --project MYPROJ --type "Bug" --dry-run
+
+# Save commands to a shell script for review
+./create_issues_from_md.py bulk_test_jira_data.md --project MYPROJ --save-script create_issues.sh --dry-run
+```
+
+4. Create the issues (remove --dry-run):
+```bash
+./create_issues_from_md.py bulk_test_jira_data.md --project MYPROJ --label "incident-followup"
+```
+
+### Markdown Format
+
+The markdown file should follow this format:
+
+```markdown
+### **Jira Issue 1**
+
+* **Priority:** Major
+* **Summary:** Brief description of the issue
+* **Description:**
+    * **Issue:** What went wrong
+    * **Corrective Action:** What needs to be done
+    * **Result:** Expected outcome
+* **Assignee:** Team name (ignored by the script)
+
+***
+```
+
+See `bulk_test_jira_data.md` for a complete example with multiple issues.
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Authentication Errors**
+- Verify your API token is valid
+- Check your JIRA_DOMAIN is correct (should be just the domain, not the full URL)
+- Ensure your token has necessary permissions
+
+2. **API Version Mismatch**
+- Check your Jira instance version
+- Verify configured API version matches
+- Update configuration if needed
+
+3. **Rate Limiting**
+- Implement retry logic in your scripts
+- Use bulk operations when possible
+- Consider implementing caching
 
 ## Planned Changes
 
@@ -171,85 +311,6 @@ The CLI will automatically use the updated configuration on the next command exe
 - Secure credential storage
 - Audit logging
 - Role-based access control
-
-## Requirements
-- Python 3.7+
-- Click
-- Requests
-
-## Quick Start
-
-1. Install the CLI:
-```bash
-pip install .
-```
-
-2. Configure your Jira credentials:
-```bash
-jira-cli configure
-```
-
-3. Start using the CLI:
-```bash
-jira-cli create --project ABC --summary "New Issue" --type "Task"
-```
-
-## Command Reference
-
-### Core Commands
-- `create`: Create new issues
-- `get`: Get issue details
-- `update`: Modify existing issues
-- `delete`: Remove issues
-- `comment`: Manage issue comments
-- `transition`: Move issues through workflows
-
-#### Transition Command Usage
-
-List available transitions for an issue:
-```bash
-jira-cli transition ISSUE-KEY --list
-```
-
-Execute a transition using either the transition ID or name:
-```bash
-# Using transition ID
-jira-cli transition ISSUE-KEY --transition TRANSITION_ID
-
-# Using transition name
-jira-cli transition ISSUE-KEY --transition "Transition Name"
-```
-
-Add a comment during transition:
-```bash
-jira-cli transition ISSUE-KEY --transition "Transition Name" --comment "Your comment here"
-```
-
-### Advanced Commands
-- `search`: Find issues using JQL
-- `watch`: Manage issue watchers
-- `dashboard`: View recent activity
-- `configure`: Manage CLI settings
-- `attachment`: Handle issue attachments
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Authentication Errors**
-- Verify your API token is valid
-- Check your JIRA_DOMAIN is correct
-- Ensure your token has necessary permissions
-
-2. **API Version Mismatch**
-- Check your Jira instance version
-- Verify configured API version matches
-- Update configuration if needed
-
-3. **Rate Limiting**
-- Implement retry logic in your scripts
-- Use bulk operations when possible
-- Consider implementing caching
 
 ## Contributing
 
